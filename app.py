@@ -334,12 +334,16 @@ def get_customers():
                 return jsonify({"error": "Customer not found"}), 404
 
             customer = row_to_dict(row)
+            customer.pop('created_at', None)
             return jsonify(customer), 200
         else:
             # Get all customers
             cursor.execute("SELECT * FROM Customers")
             rows = cursor.fetchall()
             customers = [row_to_dict(row) for row in rows]
+            # Remove created_at from all customers
+            for c in customers:
+                c.pop('created_at', None)
             return jsonify(customers), 200
     finally:
         conn.close()
@@ -361,7 +365,9 @@ def get_customer_by_id(customer_id):
         if row is None:
             return jsonify({"error": "Customer not found"}), 404
 
-        return jsonify(row_to_dict(row)), 200
+        customer = row_to_dict(row)
+        customer.pop('created_at', None)
+        return jsonify(customer), 200
     finally:
         conn.close()
 
@@ -412,6 +418,9 @@ def add_customer():
         # Return the created customer with Location header
         cursor.execute("SELECT * FROM Customers WHERE userId = ?", (userId,))
         customer = row_to_dict(cursor.fetchone())
+
+        # Remove created_at from response
+        customer.pop('created_at', None)
 
         response = make_response(jsonify(customer), 201)
         response.headers['Location'] = f'/customers/{customer["id"]}'
@@ -488,6 +497,7 @@ def update_customer(customer_id):
         # Return updated customer
         cursor.execute("SELECT * FROM Customers WHERE id = ?", (customer_id,))
         customer = row_to_dict(cursor.fetchone())
+        customer.pop('created_at', None)
 
         return jsonify(customer), 200
     finally:
