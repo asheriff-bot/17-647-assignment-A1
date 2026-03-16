@@ -98,7 +98,7 @@ def init_db():
                      "Elements of Reusable Object-Oriented Software", "programming", 54.99, 8),
                 ]
                 cursor.executemany(
-                    "INSERT INTO Books (ISBN, title, author, description, genre, price, quantity) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    "INSERT IGNORE INTO Books (ISBN, title, author, description, genre, price, quantity) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                     sample_books
                 )
 
@@ -112,7 +112,7 @@ def init_db():
                     ("bob.johnson@example.com", "Bob Johnson", "+15559012", "789 Pine Rd", "", "Chicago", "IL", "60601"),
                 ]
                 cursor.executemany(
-                    "INSERT INTO Customers (userId, name, phone, address, address2, city, state, zipcode) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+                    "INSERT IGNORE INTO Customers (userId, name, phone, address, address2, city, state, zipcode) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                     sample_customers
                 )
 
