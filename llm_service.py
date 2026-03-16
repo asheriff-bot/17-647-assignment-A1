@@ -82,7 +82,7 @@ def generate_book_summary(title, author, description):
 
 def generate_quote_for_book(title, isbn):
     prompt = (
-        f"Generate a 500-character summary for a book with the following details:\n"
+        f"Generate a 500-word summary for a book with the following details:\n"
         f"Title: {title}\n"
         f"ISBN: {isbn}\n\n"
         "Keep the summary concise, engaging, and book-related."

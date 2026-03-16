@@ -1,7 +1,9 @@
 import os
-from dotenv import load_dotenv
 
-load_dotenv(override=True)
+# Only load .env file if not running in Docker (no environment variables set)
+if not os.environ.get('MYSQL_HOST') and not os.environ.get('DB_HOST'):
+    from dotenv import load_dotenv
+    load_dotenv(override=True)
 
 class Config:
     # Database configuration - AWS RDS
