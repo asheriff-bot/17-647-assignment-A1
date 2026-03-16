@@ -161,7 +161,10 @@ def get_book_by_isbn_alt(isbn):
 @app.route('/books', methods=['POST'])
 def add_book():
     """Add a new book to the database."""
-    data = request.get_json()
+    data = request.get_json(silent=True)
+
+    if data is None or not isinstance(data, dict):
+        return jsonify({"error": "Invalid JSON or missing Content-Type: application/json"}), 400
 
     # Validate required fields
     required_fields = ['ISBN', 'title', 'author', 'description', 'genre', 'price', 'quantity']
@@ -222,7 +225,10 @@ def add_book():
 @app.route('/books/<isbn>', methods=['PUT'])
 def update_book(isbn):
     """Update an existing book."""
-    data = request.get_json()
+    data = request.get_json(silent=True)
+
+    if data is None or not isinstance(data, dict):
+        return jsonify({"error": "Invalid JSON or missing Content-Type: application/json"}), 400
 
     # Validate all required fields are present
     required_fields = ['ISBN', 'title', 'author', 'description', 'genre', 'price', 'quantity']
@@ -351,11 +357,15 @@ def get_customers():
         conn.close()
 
 
-@app.route('/customers/<int:customer_id>', methods=['GET'])
+@app.route('/customers/<customer_id>', methods=['GET'])
 def get_customer_by_id(customer_id):
     """Get a specific customer by ID."""
     # Validate that customer_id is a positive integer
-    if customer_id <= 0:
+    try:
+        customer_id = int(customer_id)
+        if customer_id <= 0:
+            return jsonify({"error": "Invalid customer ID"}), 400
+    except (ValueError, TypeError):
         return jsonify({"error": "Invalid customer ID"}), 400
 
     conn = get_db_connection()
@@ -377,7 +387,10 @@ def get_customer_by_id(customer_id):
 @app.route('/customers', methods=['POST'])
 def add_customer():
     """Add a new customer to the database."""
-    data = request.get_json()
+    data = request.get_json(silent=True)
+
+    if data is None or not isinstance(data, dict):
+        return jsonify({"error": "Invalid JSON or missing Content-Type: application/json"}), 400
 
     # Validate required fields (all except address2)
     required_fields = ['userId', 'name', 'phone', 'address', 'city', 'state', 'zipcode']
@@ -431,10 +444,21 @@ def add_customer():
         conn.close()
 
 
-@app.route('/customers/<int:customer_id>', methods=['PUT'])
+@app.route('/customers/<customer_id>', methods=['PUT'])
 def update_customer(customer_id):
     """Update an existing customer."""
-    data = request.get_json()
+    # Validate that customer_id is a positive integer
+    try:
+        customer_id = int(customer_id)
+        if customer_id <= 0:
+            return jsonify({"error": "Invalid customer ID"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid customer ID"}), 400
+
+    data = request.get_json(silent=True)
+
+    if data is None or not isinstance(data, dict):
+        return jsonify({"error": "Invalid JSON or missing Content-Type: application/json"}), 400
 
     conn = get_db_connection()
     try:
@@ -506,9 +530,17 @@ def update_customer(customer_id):
         conn.close()
 
 
-@app.route('/customers/<int:customer_id>', methods=['DELETE'])
+@app.route('/customers/<customer_id>', methods=['DELETE'])
 def delete_customer(customer_id):
     """Delete a customer from the database."""
+    # Validate that customer_id is a positive integer
+    try:
+        customer_id = int(customer_id)
+        if customer_id <= 0:
+            return jsonify({"error": "Invalid customer ID"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid customer ID"}), 400
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
