@@ -316,6 +316,11 @@ def get_customers():
     """Get customers - by userId query param or all customers."""
     userId = request.args.get('userId')
 
+    if userId:
+        # Validate email format before querying
+        if not validate_email(userId):
+            return jsonify({"error": "Invalid email format"}), 400
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -343,6 +348,10 @@ def get_customers():
 @app.route('/customers/<int:customer_id>', methods=['GET'])
 def get_customer_by_id(customer_id):
     """Get a specific customer by ID."""
+    # Validate that customer_id is a positive integer
+    if customer_id <= 0:
+        return jsonify({"error": "Invalid customer ID"}), 400
+
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
