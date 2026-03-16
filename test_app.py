@@ -4,6 +4,9 @@ import sys
 import os
 import time
 
+# Ensure the Flask app initializes in testing mode so pytest uses the SQLite fixture instead of MySQL.
+os.environ.setdefault('TESTING', 'True')
+
 # Add the parent directory to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

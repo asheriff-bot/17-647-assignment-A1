@@ -209,8 +209,10 @@ def add_book():
         summary_thread.daemon = True
         summary_thread.start()
 
-        # Return response with Location header
-        response = make_response(jsonify(book), 201)
+        # Prepare response with Location header but strip the summary so POST stays quick
+        book_response = dict(book)
+        book_response.pop('summary', None)
+        response = make_response(jsonify(book_response), 201)
         response.headers['Location'] = f'/books/{isbn}'
         return response
     finally:
