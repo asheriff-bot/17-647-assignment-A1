@@ -10,10 +10,26 @@ def _extract_summary_from_response(response_json):
     if not isinstance(response_json, dict):
         return None
 
+    # Handle OpenAI/Groq format: choices[0].message.content
+    choices = response_json.get('choices') or []
+    if isinstance(choices, list):
+        for choice in choices:
+            if isinstance(choice, dict):
+                message = choice.get('message', {})
+                content = message.get('content')
+                if isinstance(content, str) and content.strip():
+                    return content.strip()
+                # Also check for 'text' field (older OpenAI format)
+                text = choice.get('text')
+                if isinstance(text, str) and text.strip():
+                    return text.strip()
+
+    # Handle Anthropic format: output_text
     output_text = response_json.get('output_text')
     if isinstance(output_text, str) and output_text.strip():
         return output_text.strip()
 
+    # Handle Anthropic format: output[].content
     output = response_json.get('output')
     if isinstance(output, list):
         for element in output:
@@ -25,14 +41,6 @@ def _extract_summary_from_response(response_json):
                     joined = ''.join(str(item) for item in content if isinstance(item, str))
                     if joined.strip():
                         return joined.strip()
-
-    choices = response_json.get('choices') or []
-    if isinstance(choices, list):
-        for choice in choices:
-            if isinstance(choice, dict):
-                text = choice.get('text') or choice.get('content')
-                if isinstance(text, str) and text.strip():
-                    return text.strip()
 
     return None
 
@@ -48,14 +56,15 @@ def _request_llm(prompt, max_output_tokens=1024, temperature=0.7):
         }
         payload = {
             'model': Config.LLM_MODEL,
-            'input': prompt,
-            'max_output_tokens': max_output_tokens,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'max_tokens': max_output_tokens,
             'temperature': temperature,
         }
         response = requests.post(Config.LLM_API_URL, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         return _extract_summary_from_response(response.json())
-    except Exception:
+    except Exception as e:
+        print(f"LLM API Error: {e}")
         return None
 
 
