@@ -1,1 +1,1 @@
-http://ec2-34-192-64-171.compute-1.amazonaws.com:5000
+http://bookstore-dev-ALB-132104683.us-east-1.elb.amazonaws.com:80
