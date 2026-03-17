@@ -387,6 +387,25 @@ def get_customer_by_id(customer_id):
         conn.close()
 
 
+@app.route('/customers/userid/<userid>', methods=['GET'])
+def get_customer_by_userid(userid):
+    """Get a specific customer by userID (email)."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Customers WHERE userId = ?", (userid,))
+        row = cursor.fetchone()
+
+        if row is None:
+            return jsonify({"error": "Customer not found"}), 404
+
+        customer = row_to_dict(row)
+        customer.pop('created_at', None)
+        return jsonify(customer), 200
+    finally:
+        conn.close()
+
+
 @app.route('/customers', methods=['POST'])
 def add_customer():
     """Add a new customer to the database."""
