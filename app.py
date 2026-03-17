@@ -53,9 +53,13 @@ def row_to_dict(row):
 
 
 def format_book_response(book_dict):
-    """Format book dict to match API spec (rename 'author' to 'Author')."""
-    if book_dict and 'author' in book_dict:
-        book_dict['Author'] = book_dict.pop('author')
+    """Format book dict to match API spec (rename 'author' to 'Author', remove timestamps)."""
+    if book_dict:
+        if 'author' in book_dict:
+            book_dict['Author'] = book_dict.pop('author')
+        # Remove timestamp fields not in spec
+        book_dict.pop('created_at', None)
+        book_dict.pop('updated_at', None)
     return book_dict
 
 
@@ -203,6 +207,22 @@ def add_book():
     if quantity is None:
         return jsonify({"error": "Missing required field: quantity"}), 400
 
+    # Validate price is numeric and non-negative
+    try:
+        price = float(price)
+        if price < 0:
+            return jsonify({"error": "Price must be non-negative"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Price must be a valid number"}), 400
+
+    # Validate quantity is numeric and non-negative
+    try:
+        quantity = int(quantity)
+        if quantity < 0:
+            return jsonify({"error": "Quantity must be non-negative"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Quantity must be a valid integer"}), 400
+
     # Validate price has at most 2 decimal places
     if not validate_price(price):
         return jsonify({"error": "Price must have at most 2 decimal places"}), 400
@@ -257,48 +277,64 @@ def update_book(isbn):
     if data is None or not isinstance(data, dict):
         return jsonify({"error": "Invalid JSON or missing Content-Type: application/json"}), 400
 
-    # Accept both 'ISBN' and 'isbn' for compatibility
-    isbn_from_body = data.get('ISBN') or data.get('isbn')
-    title = data.get('title')
-    author = data.get('author')
-    description = data.get('description')
-    genre = data.get('genre')
-    price = data.get('price')
-    quantity = data.get('quantity')
-
-    # Validate required fields
-    if not isbn_from_body:
-        return jsonify({"error": "Missing required field: ISBN"}), 400
-    if not title:
-        return jsonify({"error": "Missing required field: title"}), 400
-    if not author:
-        return jsonify({"error": "Missing required field: author"}), 400
-    if not description:
-        return jsonify({"error": "Missing required field: description"}), 400
-    if not genre:
-        return jsonify({"error": "Missing required field: genre"}), 400
-    if price is None:
-        return jsonify({"error": "Missing required field: price"}), 400
-    if quantity is None:
-        return jsonify({"error": "Missing required field: quantity"}), 400
-
-    # Validate price has at most 2 decimal places
-    if not validate_price(price):
-        return jsonify({"error": "Price must have at most 2 decimal places"}), 400
-
-    # Ensure ISBN in body matches URL parameter
-    if isbn_from_body != isbn:
-        return jsonify({"error": "ISBN in body does not match URL parameter"}), 400
-
+    # Check if book exists FIRST (before validating fields)
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
-        # Check if book exists
         cursor.execute("SELECT * FROM Books WHERE ISBN = ?", (isbn,))
         existing_book_row = cursor.fetchone()
 
         if existing_book_row is None:
             return jsonify({"error": "Book not found"}), 404
+
+        # Now validate and extract fields
+        isbn_from_body = data.get('ISBN') or data.get('isbn')
+        title = data.get('title')
+        author = data.get('Author') or data.get('author')
+        description = data.get('description')
+        genre = data.get('genre')
+        price = data.get('price')
+        quantity = data.get('quantity')
+
+        # Validate required fields
+        if not isbn_from_body:
+            return jsonify({"error": "Missing required field: ISBN"}), 400
+        if not title:
+            return jsonify({"error": "Missing required field: title"}), 400
+        if not author:
+            return jsonify({"error": "Missing required field: Author"}), 400
+        if not description:
+            return jsonify({"error": "Missing required field: description"}), 400
+        if not genre:
+            return jsonify({"error": "Missing required field: genre"}), 400
+        if price is None:
+            return jsonify({"error": "Missing required field: price"}), 400
+        if quantity is None:
+            return jsonify({"error": "Missing required field: quantity"}), 400
+
+        # Ensure ISBN in body matches URL parameter
+        if isbn_from_body != isbn:
+            return jsonify({"error": "ISBN in body does not match URL parameter"}), 400
+
+        # Validate price is numeric and non-negative
+        try:
+            price = float(price)
+            if price < 0:
+                return jsonify({"error": "Price must be non-negative"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"error": "Price must be a valid number"}), 400
+
+        # Validate quantity is numeric and non-negative
+        try:
+            quantity = int(quantity)
+            if quantity < 0:
+                return jsonify({"error": "Quantity must be non-negative"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"error": "Quantity must be a valid integer"}), 400
+
+        # Validate price has at most 2 decimal places
+        if not validate_price(price):
+            return jsonify({"error": "Price must have at most 2 decimal places"}), 400
 
         # Use the validated fields
 
