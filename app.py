@@ -131,6 +131,12 @@ def get_all_books():
         conn.close()
 
 
+@app.route('/books/isbn/<isbn>', methods=['GET'])
+def get_book_by_isbn_alt(isbn):
+    """Get a specific book by ISBN (alternative endpoint)."""
+    return get_book_by_isbn(isbn)
+
+
 @app.route('/books/<isbn>', methods=['GET'])
 def get_book_by_isbn(isbn):
     """Get a specific book by ISBN."""
@@ -152,12 +158,6 @@ def get_book_by_isbn(isbn):
         conn.close()
 
 
-@app.route('/books/isbn/<isbn>', methods=['GET'])
-def get_book_by_isbn_alt(isbn):
-    """Get a specific book by ISBN (alternative endpoint)."""
-    return get_book_by_isbn(isbn)
-
-
 @app.route('/books', methods=['POST'])
 def add_book():
     """Add a new book to the database."""
@@ -166,19 +166,30 @@ def add_book():
     if data is None or not isinstance(data, dict):
         return jsonify({"error": "Invalid JSON or missing Content-Type: application/json"}), 400
 
-    # Validate required fields
-    required_fields = ['ISBN', 'title', 'author', 'description', 'genre', 'price', 'quantity']
-    for field in required_fields:
-        if field not in data:
-            return jsonify({"error": f"Missing required field: {field}"}), 400
+    # Accept both 'ISBN' and 'isbn' for compatibility
+    isbn = data.get('ISBN') or data.get('isbn')
+    title = data.get('title')
+    author = data.get('author')
+    description = data.get('description')
+    genre = data.get('genre')
+    price = data.get('price')
+    quantity = data.get('quantity')
 
-    isbn = data['ISBN']
-    title = data['title']
-    author = data['author']
-    description = data['description']
-    genre = data['genre']
-    price = data['price']
-    quantity = data['quantity']
+    # Validate required fields
+    if not isbn:
+        return jsonify({"error": "Missing required field: ISBN"}), 400
+    if not title:
+        return jsonify({"error": "Missing required field: title"}), 400
+    if not author:
+        return jsonify({"error": "Missing required field: author"}), 400
+    if not description:
+        return jsonify({"error": "Missing required field: description"}), 400
+    if not genre:
+        return jsonify({"error": "Missing required field: genre"}), 400
+    if price is None:
+        return jsonify({"error": "Missing required field: price"}), 400
+    if quantity is None:
+        return jsonify({"error": "Missing required field: quantity"}), 400
 
     # Validate price has at most 2 decimal places
     if not validate_price(price):
@@ -233,18 +244,37 @@ def update_book(isbn):
     if data is None or not isinstance(data, dict):
         return jsonify({"error": "Invalid JSON or missing Content-Type: application/json"}), 400
 
-    # Validate all required fields are present
-    required_fields = ['ISBN', 'title', 'author', 'description', 'genre', 'price', 'quantity']
-    for field in required_fields:
-        if field not in data:
-            return jsonify({"error": f"Missing required field: {field}"}), 400
+    # Accept both 'ISBN' and 'isbn' for compatibility
+    isbn_from_body = data.get('ISBN') or data.get('isbn')
+    title = data.get('title')
+    author = data.get('author')
+    description = data.get('description')
+    genre = data.get('genre')
+    price = data.get('price')
+    quantity = data.get('quantity')
+
+    # Validate required fields
+    if not isbn_from_body:
+        return jsonify({"error": "Missing required field: ISBN"}), 400
+    if not title:
+        return jsonify({"error": "Missing required field: title"}), 400
+    if not author:
+        return jsonify({"error": "Missing required field: author"}), 400
+    if not description:
+        return jsonify({"error": "Missing required field: description"}), 400
+    if not genre:
+        return jsonify({"error": "Missing required field: genre"}), 400
+    if price is None:
+        return jsonify({"error": "Missing required field: price"}), 400
+    if quantity is None:
+        return jsonify({"error": "Missing required field: quantity"}), 400
 
     # Validate price has at most 2 decimal places
-    if not validate_price(data['price']):
+    if not validate_price(price):
         return jsonify({"error": "Price must have at most 2 decimal places"}), 400
 
     # Ensure ISBN in body matches URL parameter
-    if data['ISBN'] != isbn:
+    if isbn_from_body != isbn:
         return jsonify({"error": "ISBN in body does not match URL parameter"}), 400
 
     conn = get_db_connection()
@@ -257,13 +287,7 @@ def update_book(isbn):
         if existing_book_row is None:
             return jsonify({"error": "Book not found"}), 404
 
-        # Update all fields
-        title = data['title']
-        author = data['author']
-        description = data['description']
-        genre = data['genre']
-        price = data['price']
-        quantity = data['quantity']
+        # Use the validated fields
 
         # Get existing summary to preserve it (or regenerate if content changed)
         existing_book = row_to_dict(existing_book_row)
