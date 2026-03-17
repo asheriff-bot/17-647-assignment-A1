@@ -615,12 +615,6 @@ def health_check():
     return jsonify({"status": "healthy"}), 200
 
 
-@app.route('/status', methods=['GET'])
-def status_check():
-    """Status check endpoint for monitoring."""
-    return Response("OK", status=200, mimetype='text/plain')
-
-
 @app.route('/reset-db', methods=['POST'])
 def reset_database():
     """Reset database - clear all data and reset auto-increment counters."""
