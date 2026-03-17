@@ -6,7 +6,7 @@ import re
 import threading
 import time
 from datetime import datetime
-from llm_service import generate_book_summary, generate_quote_for_book
+from llm_service import generate_book_summary, generate_quote_for_book, _placeholder_summary
 
 # Add the current directory to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -193,7 +193,6 @@ def add_book():
             return jsonify({"message": "This ISBN already exists in the system."}), 422
 
         # Generate placeholder summary immediately so GET always returns valid summary
-        from llm_service import _placeholder_summary
         placeholder = _placeholder_summary(title, author, description)
 
         # Insert new book with placeholder summary (will be replaced by LLM async)
