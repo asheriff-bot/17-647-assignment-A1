@@ -52,14 +52,22 @@ def row_to_dict(row):
     return dict_result
 
 
-def format_book_response(book_dict):
-    """Format book dict to match API spec (rename 'author' to 'Author', remove timestamps)."""
+def format_book_response(book_dict, include_summary=True):
+    """Format book dict to match API spec (rename 'author' to 'Author', remove timestamps).
+
+    Args:
+        book_dict: The book dictionary to format
+        include_summary: If False, removes summary field (for POST/PUT responses)
+    """
     if book_dict:
         if 'author' in book_dict:
             book_dict['Author'] = book_dict.pop('author')
         # Remove timestamp fields not in spec
         book_dict.pop('created_at', None)
         book_dict.pop('updated_at', None)
+        # Remove summary for POST/PUT responses (only GET should include it)
+        if not include_summary:
+            book_dict.pop('summary', None)
     return book_dict
 
 
@@ -309,21 +317,21 @@ def update_book(isbn):
     if quantity is None:
         return jsonify({"error": "Missing required field: quantity"}), 400
 
-        # Validate price is numeric and non-negative
-        try:
-            price = float(price)
-            if price < 0:
-                return jsonify({"error": "Price must be non-negative"}), 400
-        except (ValueError, TypeError):
-            return jsonify({"error": "Price must be a valid number"}), 400
+    # Validate price is numeric and non-negative
+    try:
+        price = float(price)
+        if price < 0:
+            return jsonify({"error": "Price must be non-negative"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Price must be a valid number"}), 400
 
-        # Validate quantity is numeric and non-negative
-        try:
-            quantity = int(quantity)
-            if quantity < 0:
-                return jsonify({"error": "Quantity must be non-negative"}), 400
-        except (ValueError, TypeError):
-            return jsonify({"error": "Quantity must be a valid integer"}), 400
+    # Validate quantity is numeric and non-negative
+    try:
+        quantity = int(quantity)
+        if quantity < 0:
+            return jsonify({"error": "Quantity must be non-negative"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Quantity must be a valid integer"}), 400
 
     # Validate price has at most 2 decimal places
     if not validate_price(price):
@@ -368,8 +376,8 @@ def update_book(isbn):
         if book.get('price'):
             book['price'] = float(book['price'])
 
-        # Format response to match spec (rename 'author' to 'Author')
-        book = format_book_response(book)
+        # Format response to match spec (rename 'author' to 'Author', exclude summary)
+        book = format_book_response(book, include_summary=False)
         return jsonify(book), 200
     finally:
         conn.close()
