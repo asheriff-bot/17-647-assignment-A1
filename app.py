@@ -52,6 +52,13 @@ def row_to_dict(row):
     return dict_result
 
 
+def format_book_response(book_dict):
+    """Format book dict to match API spec (rename 'author' to 'Author')."""
+    if book_dict and 'author' in book_dict:
+        book_dict['Author'] = book_dict.pop('author')
+    return book_dict
+
+
 def validate_price(price):
     """Validate that price has at most 2 decimal places."""
     if price is None:
@@ -121,10 +128,13 @@ def get_all_books():
         rows = cursor.fetchall()
         books = [row_to_dict(row) for row in rows]
 
-        # Convert Decimal to float for JSON serialization
+        # Convert Decimal to float for JSON serialization and format response
         for book in books:
             if book.get('price'):
                 book['price'] = float(book['price'])
+
+        # Format all books to match spec (rename 'author' to 'Author')
+        books = [format_book_response(book) for book in books]
 
         return jsonify(books), 200
     finally:
@@ -153,6 +163,8 @@ def get_book_by_isbn(isbn):
         if book.get('price'):
             book['price'] = float(book['price'])
 
+        # Format response to match spec (rename 'author' to 'Author')
+        book = format_book_response(book)
         return jsonify(book), 200
     finally:
         conn.close()
@@ -166,10 +178,10 @@ def add_book():
     if data is None or not isinstance(data, dict):
         return jsonify({"error": "Invalid JSON or missing Content-Type: application/json"}), 400
 
-    # Accept both 'ISBN' and 'isbn' for compatibility
+    # Accept both 'ISBN' and 'isbn', 'Author' and 'author' for compatibility
     isbn = data.get('ISBN') or data.get('isbn')
     title = data.get('title')
-    author = data.get('author')
+    author = data.get('Author') or data.get('author')
     description = data.get('description')
     genre = data.get('genre')
     price = data.get('price')
@@ -181,7 +193,7 @@ def add_book():
     if not title:
         return jsonify({"error": "Missing required field: title"}), 400
     if not author:
-        return jsonify({"error": "Missing required field: author"}), 400
+        return jsonify({"error": "Missing required field: Author"}), 400
     if not description:
         return jsonify({"error": "Missing required field: description"}), 400
     if not genre:
@@ -229,6 +241,7 @@ def add_book():
         # Prepare response with Location header but strip the summary so POST stays quick
         book_response = dict(book)
         book_response.pop('summary', None)
+        book_response = format_book_response(book_response)
         response = make_response(jsonify(book_response), 201)
         response.headers['Location'] = f'/books/{isbn}'
         return response
@@ -318,6 +331,8 @@ def update_book(isbn):
         if book.get('price'):
             book['price'] = float(book['price'])
 
+        # Format response to match spec (rename 'author' to 'Author')
+        book = format_book_response(book)
         return jsonify(book), 200
     finally:
         conn.close()
@@ -399,25 +414,6 @@ def get_customer_by_id(customer_id):
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM Customers WHERE id = ?", (customer_id,))
-        row = cursor.fetchone()
-
-        if row is None:
-            return jsonify({"error": "Customer not found"}), 404
-
-        customer = row_to_dict(row)
-        customer.pop('created_at', None)
-        return jsonify(customer), 200
-    finally:
-        conn.close()
-
-
-@app.route('/customers/userid/<userid>', methods=['GET'])
-def get_customer_by_userid(userid):
-    """Get a specific customer by userID (email)."""
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM Customers WHERE userId = ?", (userid,))
         row = cursor.fetchone()
 
         if row is None:
@@ -617,6 +613,12 @@ def status_check():
 def health_check():
     """Health check endpoint."""
     return jsonify({"status": "healthy"}), 200
+
+
+@app.route('/status', methods=['GET'])
+def status_check():
+    """Status check endpoint for monitoring."""
+    return Response("OK", status=200, mimetype='text/plain')
 
 
 @app.route('/reset-db', methods=['POST'])
