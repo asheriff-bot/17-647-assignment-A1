@@ -277,44 +277,37 @@ def update_book(isbn):
     if data is None or not isinstance(data, dict):
         return jsonify({"error": "Invalid JSON or missing Content-Type: application/json"}), 400
 
-    # Check if book exists FIRST (before validating fields)
-    conn = get_db_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM Books WHERE ISBN = ?", (isbn,))
-        existing_book_row = cursor.fetchone()
+    # Extract and validate fields FIRST (before checking if book exists)
+    isbn_from_body = data.get('ISBN') or data.get('isbn')
 
-        if existing_book_row is None:
-            return jsonify({"error": "Book not found"}), 404
+    # Validate ISBN field exists
+    if not isbn_from_body:
+        return jsonify({"error": "Missing required field: ISBN"}), 400
 
-        # Now validate and extract fields
-        isbn_from_body = data.get('ISBN') or data.get('isbn')
-        title = data.get('title')
-        author = data.get('Author') or data.get('author')
-        description = data.get('description')
-        genre = data.get('genre')
-        price = data.get('price')
-        quantity = data.get('quantity')
+    # Ensure ISBN in body matches URL parameter (400 before checking existence)
+    if isbn_from_body != isbn:
+        return jsonify({"error": "ISBN in body does not match URL parameter"}), 400
 
-        # Validate required fields
-        if not isbn_from_body:
-            return jsonify({"error": "Missing required field: ISBN"}), 400
-        if not title:
-            return jsonify({"error": "Missing required field: title"}), 400
-        if not author:
-            return jsonify({"error": "Missing required field: Author"}), 400
-        if not description:
-            return jsonify({"error": "Missing required field: description"}), 400
-        if not genre:
-            return jsonify({"error": "Missing required field: genre"}), 400
-        if price is None:
-            return jsonify({"error": "Missing required field: price"}), 400
-        if quantity is None:
-            return jsonify({"error": "Missing required field: quantity"}), 400
+    title = data.get('title')
+    author = data.get('Author') or data.get('author')
+    description = data.get('description')
+    genre = data.get('genre')
+    price = data.get('price')
+    quantity = data.get('quantity')
 
-        # Ensure ISBN in body matches URL parameter
-        if isbn_from_body != isbn:
-            return jsonify({"error": "ISBN in body does not match URL parameter"}), 400
+    # Validate other required fields
+    if not title:
+        return jsonify({"error": "Missing required field: title"}), 400
+    if not author:
+        return jsonify({"error": "Missing required field: Author"}), 400
+    if not description:
+        return jsonify({"error": "Missing required field: description"}), 400
+    if not genre:
+        return jsonify({"error": "Missing required field: genre"}), 400
+    if price is None:
+        return jsonify({"error": "Missing required field: price"}), 400
+    if quantity is None:
+        return jsonify({"error": "Missing required field: quantity"}), 400
 
         # Validate price is numeric and non-negative
         try:
@@ -332,11 +325,19 @@ def update_book(isbn):
         except (ValueError, TypeError):
             return jsonify({"error": "Quantity must be a valid integer"}), 400
 
-        # Validate price has at most 2 decimal places
-        if not validate_price(price):
-            return jsonify({"error": "Price must have at most 2 decimal places"}), 400
+    # Validate price has at most 2 decimal places
+    if not validate_price(price):
+        return jsonify({"error": "Price must have at most 2 decimal places"}), 400
 
-        # Use the validated fields
+    # NOW check if book exists (after all validation)
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Books WHERE ISBN = ?", (isbn,))
+        existing_book_row = cursor.fetchone()
+
+        if existing_book_row is None:
+            return jsonify({"error": "Book not found"}), 404
 
         # Get existing summary to preserve it (or regenerate if content changed)
         existing_book = row_to_dict(existing_book_row)
