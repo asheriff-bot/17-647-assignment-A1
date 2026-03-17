@@ -192,11 +192,15 @@ def add_book():
         if cursor.fetchone():
             return jsonify({"message": "This ISBN already exists in the system."}), 422
 
-        # Insert new book with empty summary (will be generated async)
+        # Generate placeholder summary immediately so GET always returns valid summary
+        from llm_service import _placeholder_summary
+        placeholder = _placeholder_summary(title, author, description)
+
+        # Insert new book with placeholder summary (will be replaced by LLM async)
         cursor.execute("""
             INSERT INTO Books (ISBN, title, author, description, genre, price, quantity, summary)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (isbn, title, author, description, genre, price, quantity, ""))
+        """, (isbn, title, author, description, genre, price, quantity, placeholder))
 
         conn.commit()
 
