@@ -573,6 +573,28 @@ def health_check():
     return jsonify({"status": "healthy"}), 200
 
 
+@app.route('/reset-db', methods=['POST'])
+def reset_database():
+    """Reset database - clear all data and reset auto-increment counters."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # Delete all data
+        cursor.execute("DELETE FROM Books")
+        cursor.execute("DELETE FROM Customers")
+
+        # Reset auto-increment for Customers
+        cursor.execute("ALTER TABLE Customers AUTO_INCREMENT = 1")
+
+        conn.commit()
+        return jsonify({"message": "Database reset successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+
+
 @app.route('/api/greeting', methods=['POST'])
 def greeting():
     """Simple greeting endpoint for testing."""
